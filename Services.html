@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safe-Walk Services</title>
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="./css/style_serv.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <h1>Safe-Walk</h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="safety.html">Safety</a></li>
+        <li><a href="Services.html" class="active">Services</a></li>
+        <li><a href="Sos.html">SOS</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <div class="container">
+      <h2>Nearby Safety Services</h2>
+      <p id="location-status">Getting your location...</p>
+      
+      <div class="controls">
+        <div class="buttons">
+          <button class="button" onclick="fetchNearbyPlaces('Police Stations', this)">Police Stations</button>
+          <button class="button" onclick="fetchNearbyPlaces('Hospitals', this)">Hospitals</button>
+          <button class="button" onclick="fetchNearbyPlaces('Fire Stations', this)">Fire Stations</button>
+          <button class="button" onclick="fetchNearbyPlaces('ATMs', this)">ATMs</button>
+          <button class="button" onclick="fetchNearbyPlaces('Gas Stations', this)">Gas Stations</button>
+        </div>
+      </div>
+
+      <div class="content-wrapper">
+        <div class="map-container">
+          <div id="map"></div>
+        </div>
+        <div class="results-container">
+          <div id="results"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let map;
+    let currentLocation = { lat: null, lng: null };
+    let currentAddress = '';
+    const defaultLocation = { lat: 22.525870, lng: 88.334175 };
+    let markers = [];
+    let usingDefaultLocation = true;
+ 
+    // Function to initialize the map
+    function initMap() {
+      // Initialize the map with default location
+      map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 15,
+        center: defaultLocation,
+      });
+      
+      // Add a marker at the default location
+      const defaultMarker = new google.maps.Marker({
+        position: defaultLocation,
+        map: map,
+        title: "Default Location",
+        icon: {
+          url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+        }
+      });
+      
+      // Send default location to the backend immediately
+      sendLocationData(defaultLocation.lat, defaultLocation.lng);
+      
+      // Get the address for default location
+      getAddressFromCoordinates(defaultLocation.lat, defaultLocation.lng);
+      
+      // Load initial places based on default location
+      setTimeout(() => {
+        fetchNearbyPlaces('Police Stations', document.querySelector('.button'));
+      }, 500);
+      
+      // Try to get the user's current location in the background
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            // Success: update the current location
+            currentLocation.lat = position.coords.latitude;
+            currentLocation.lng = position.coords.longitude;
+            usingDefaultLocation = false;
+            
+            // Send the updated location to the backend
+            sendLocationData(currentLocation.lat, currentLocation.lng);
+            
+            // Update the map to center at the user's location
+            map.setCenter(currentLocation);
+            
+            // Clear previous markers and add a new one at the current location
+            defaultMarker.setMap(null);
+            const marker = new google.maps.Marker({
+              position: currentLocation,
+              map: map,
+              title: "You are here",
+              icon: {
+                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+              }
+            });
+            
+            // Get the address using Geocoding API
+            getAddressFromCoordinates(currentLocation.lat, currentLocation.lng);
+            
+            // Reload the currently active category with the new location
+            const activeButton = document.querySelector('.button.active-button');
+            if (activeButton) {
+              const category = activeButton.textContent.trim();
+              fetchNearbyPlaces(category, activeButton);
+            } else {
+              fetchNearbyPlaces('Police Stations', document.querySelector('.button'));
+            }
+          },
+          function (error) {
+            console.log("Unable to retrieve your location:", error.message);
+            // Continue using default location, which is already set up
+          }
+        );
+      } else {
+        console.log("Geolocation is not supported by this browser.");
+        // Continue using default location, which is already set up
+      }
+    }
+ 
+    // Function to send the location to the backend
+    async function sendLocationData(latitude, longitude) {
+      try {
+        const response = await fetch('/location/saveLocation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            latitude: latitude,
+            longitude: longitude,
+          }),
+        });
+ 
+        const data = await response.json();
+        console.log('Location saved:', data);
+      } catch (error) {
+        console.error('Error sending location data:', error);
+      }
+    }
+ 
+    // Function to get the address from the coordinates using proxy
+    async function getAddressFromCoordinates(lat, lng) {
+      try {
+        const response = await fetch('/api/geocode', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            location: { lat, lng }
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'OK' && data.results[0]) {
+          currentAddress = data.results[0].formatted_address;
+          console.log('Address fetched:', currentAddress);
+          displayAddress(currentAddress, usingDefaultLocation);
+        } else {
+          console.error('No results found for the given coordinates.');
+          displayAddress('No address found for the given location', usingDefaultLocation);
+        }
+      } catch (error) {
+        console.error('Geocoding failed:', error);
+        displayAddress('Geocoding failed. Please try again later', usingDefaultLocation);
+      }
+    }
+
+    // Function to display the address
+    function displayAddress(address, isDefault = false) {
+      const locationStatus = document.getElementById('location-status');
+      const prefix = isDefault ? 'Default location: ' : 'Your location: ';
+      locationStatus.textContent = prefix + address;
+    }
+
+    // Function to fetch nearby places using proxy
+    async function fetchNearbyPlaces(category, buttonElement) {
+      // Remove active class from all buttons
+      document.querySelectorAll('.button').forEach(btn => {
+        btn.classList.remove('active-button');
+      });
+      
+      // Add active class to clicked button
+      buttonElement.classList.add('active-button');
+
+      const locationToUse = usingDefaultLocation ? defaultLocation : currentLocation;
+      
+      try {
+        let keyword, type;
+        
+        switch(category) {
+          case 'Police Stations':
+            keyword = 'police station';
+            type = 'police';
+            break;
+          case 'Hospitals':
+            keyword = 'hospital';
+            type = 'hospital';
+            break;
+          case 'Fire Stations':
+            keyword = 'fire station';
+            type = 'fire_station';
+            break;
+          case 'ATMs':
+            keyword = 'ATM';
+            type = 'atm';
+            break;
+          case 'Gas Stations':
+            keyword = 'gas station';
+            type = 'gas_station';
+            break;
+        }
+
+        const response = await fetch('/api/places/nearby', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            location: locationToUse,
+            radius: 5000,
+            type: type,
+            keyword: keyword
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.status === 'OK') {
+          displayResults(data.results, category);
+          displayMarkersOnMap(data.results);
+        } else {
+          console.error('Places API error:', data.status);
+          document.getElementById('results').innerHTML = '<p>Error fetching places. Please try again.</p>';
+        }
+      } catch (error) {
+        console.error('Error fetching places:', error);
+        document.getElementById('results').innerHTML = '<p>Error fetching places. Please try again.</p>';
+      }
+    }
+
+    // Function to display results
+    function displayResults(places, category) {
+      const resultsDiv = document.getElementById('results');
+      
+      if (places.length === 0) {
+        resultsDiv.innerHTML = `<p>No ${category.toLowerCase()} found nearby.</p>`;
+        return;
+      }
+
+      let html = `<h3>Nearby ${category}</h3>`;
+      
+      places.forEach((place, index) => {
+        const rating = place.rating ? `⭐ ${place.rating}` : 'No rating';
+        const isOpen = place.opening_hours && place.opening_hours.open_now ? 
+          '<span class="open">Open now</span>' : 
+          place.opening_hours ? '<span class="closed">Closed</span>' : '';
+        
+        html += `
+          <div class="result-item">
+            <h4>${place.name}</h4>
+            <p class="address">${place.vicinity}</p>
+            <div class="meta">
+              <span class="rating">${rating}</span>
+              ${isOpen}
+            </div>
+            <div class="actions">
+              <button onclick="getDirections(${place.geometry.location.lat}, ${place.geometry.location.lng})" class="direction-btn">
+                Get Directions
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      
+      resultsDiv.innerHTML = html;
+    }
+
+    // Function to display markers on map
+    function displayMarkersOnMap(places) {
+      // Clear existing markers
+      markers.forEach(marker => marker.setMap(null));
+      markers = [];
+
+      // Add new markers
+      places.forEach((place, index) => {
+        const marker = new google.maps.Marker({
+          position: place.geometry.location,
+          map: map,
+          title: place.name,
+          icon: {
+            url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+          }
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div>
+              <strong>${place.name}</strong><br>
+              ${place.vicinity}<br>
+              ${place.rating ? `Rating: ${place.rating}⭐` : ''}
+            </div>
+          `
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        markers.push(marker);
+      });
+    }
+
+    // Function to get directions
+    function getDirections(lat, lng) {
+      const origin = usingDefaultLocation ? 
+        `${defaultLocation.lat},${defaultLocation.lng}` : 
+        `${currentLocation.lat},${currentLocation.lng}`;
+      const destination = `${lat},${lng}`;
+      
+      const url = `https://www.google.com/maps/dir/${origin}/${destination}`;
+      window.open(url, '_blank');
+    }
+
+    // Load Maps API via proxy
+    fetch('/api/maps-script?callback=initMap')
+      .then(response => response.text())
+      .then(script => {
+        eval(script);
+      })
+      .catch(error => {
+        console.error('Error loading maps:', error);
+      });
+  </script>
+</body>
+</html>

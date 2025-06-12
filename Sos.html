@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safe-Walk SOS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="./css/style_sos.css">
+</head>
+<body>
+  <header>
+    <h1>Safe-Walk</h1>
+    <nav>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="safety.html">Safety</a></li>
+        <li><a href="Services.html">Services</a></li>
+        <li><a href="Sos.html" class="active">SOS</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <div class="container">
+      <h2>Emergency SOS Services</h2>
+      <p id="location-status">Getting your location...</p>
+      
+      <div class="sos-buttons">
+        <button class="sos-btn police" onclick="sendSOS('police')">
+          <i class="fas fa-shield-alt"></i>
+          <span>Police</span>
+          <small>100</small>
+        </button>
+        <button class="sos-btn fire" onclick="sendSOS('fire')">
+          <i class="fas fa-fire-extinguisher"></i>
+          <span>Fire Department</span>
+          <small>101</small>
+        </button>
+        <button class="sos-btn ambulance" onclick="sendSOS('ambulance')">
+          <i class="fas fa-ambulance"></i>
+          <span>Ambulance</span>
+          <small>102</small>
+        </button>
+      </div>
+
+      <div class="filter-buttons">
+        <button class="filter-btn active" onclick="filterPlaces('all')">All</button>
+        <button class="filter-btn" onclick="filterPlaces('police')">Police</button>
+        <button class="filter-btn" onclick="filterPlaces('hospital')">Hospital</button>
+        <button class="filter-btn" onclick="filterPlaces('fire_station')">Fire Station</button>
+      </div>
+
+      <div class="content-wrapper">
+        <div class="map-container">
+          <div id="map"></div>
+        </div>
+        <div class="results-container">
+          <div id="results"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let map;
+    let currentLocation = { lat: null, lng: null };
+    let currentAddress = '';
+    const defaultLocation = { lat: 22.525870, lng: 88.334175 };
+    let markers = [];
+    let usingDefaultLocation = true;
+    let allPlaces = [];
+    let currentFilter = 'all';
+    
+    // Function to initialize the map
+    function initMap() {
+      // Initialize the map with default location
+      map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 15,
+        center: defaultLocation,
+      });
+
+      // Add marker for default location
+      const defaultMarker = new google.maps.Marker({
+        position: defaultLocation,
+        map: map,
+        title: "Default Location (Kolkata)",
+        icon: {
+          url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+        }
+      });
+
+      // Send default location to the backend immediately
+      sendLocationData(defaultLocation.lat, defaultLocation.lng);
+      
+      // Get the address for the default location
+      getAddressFromCoordinates(defaultLocation.lat, defaultLocation.lng);
+      
+      // Initially load all types of places for default location
+      fetchAllNearbyPlaces();
+      
+      // Try to get geolocation permission
+      checkGeolocationPermission();
+
+      // Set up filter button event listeners
+      setupFilterButtons();
+    }
+
+    // Function to get the address from coordinates using proxy
+    async function getAddressFromCoordinates(lat, lng) {
+      try {
+        const response = await fetch('/api/geocode', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            location: { lat, lng }
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'OK' && data.results[0]) {
+          currentAddress = data.results[0].formatted_address;
+          console.log('Address fetched:', currentAddress);
+          displayAddress(currentAddress);
+        } else {
+          console.error('No results found for the given coordinates.');
+          displayAddress('No address found for the given location');
+        }
+      } catch (error) {
+        console.error('Geocoding failed:', error);
+        displayAddress('Geocoding failed. Please try again later');
+      }
+    }
+
+    // Function to display the address
+    function displayAddress(address) {
+      const locationStatus = document.getElementById('location-status');
+      const prefix = usingDefaultLocation ? 'Default location: ' : 'Your location: ';
+      locationStatus.textContent = prefix + address;
+    }
+
+    // Function to check geolocation permission
+    function checkGeolocationPermission() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            // Success: update location
+            currentLocation.lat = position.coords.latitude;
+            currentLocation.lng = position.coords.longitude;
+            usingDefaultLocation = false;
+            
+            // Update map center
+            map.setCenter(currentLocation);
+            
+            // Add user location marker
+            new google.maps.Marker({
+              position: currentLocation,
+              map: map,
+              title: "You are here",
+              icon: {
+                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+              }
+            });
+            
+            // Send updated location to backend
+            sendLocationData(currentLocation.lat, currentLocation.lng);
+            
+            // Get address for new location
+            getAddressFromCoordinates(currentLocation.lat, currentLocation.lng);
+            
+            // Reload places with new location
+            fetchAllNearbyPlaces();
+          },
+          function (error) {
+            console.log("Geolocation error:", error.message);
+            displayAddress(currentAddress);
+          }
+        );
+      }
+    }
+
+    // Function to send location data to backend
+    async function sendLocationData(latitude, longitude) {
+      try {
+        const response = await fetch('/location/saveLocation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            latitude: latitude,
+            longitude: longitude,
+          }),
+        });
+
+        const data = await response.json();
+        console.log('Location saved:', data);
+      } catch (error) {
+        console.error('Error sending location data:', error);
+      }
+    }
+
+    // Function to fetch all nearby places
+    async function fetchAllNearbyPlaces() {
+      const locationToUse = usingDefaultLocation ? defaultLocation : currentLocation;
+      const placeTypes = [
+        { type: 'police', keyword: 'police station' },
+        { type: 'hospital', keyword: 'hospital' },
+        { type: 'fire_station', keyword: 'fire station' }
+      ];
+
+      allPlaces = [];
+
+      for (const placeType of placeTypes) {
+        try {
+          const response = await fetch('/api/places/nearby', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              location: locationToUse,
+              radius: 5000,
+              type: placeType.type,
+              keyword: placeType.keyword
+            })
+          });
+
+          const data = await response.json();
+          
+          if (data.status === 'OK') {
+            const placesWithType = data.results.map(place => ({
+              ...place,
+              serviceType: placeType.type
+            }));
+            allPlaces = allPlaces.concat(placesWithType);
+          }
+        } catch (error) {
+          console.error(`Error fetching ${placeType.type}:`, error);
+        }
+      }
+
+      // Display all places initially
+      displayFilteredResults();
+    }
+
+    // Function to filter places
+    function filterPlaces(type) {
+      currentFilter = type;
+      
+      // Update active filter button
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      displayFilteredResults();
+    }
+
+    // Function to display filtered results
+    function displayFilteredResults() {
+      let filteredPlaces = allPlaces;
+      
+      if (currentFilter !== 'all') {
+        filteredPlaces = allPlaces.filter(place => place.serviceType === currentFilter);
+      }
+
+      displayResults(filteredPlaces);
+      displayMarkersOnMap(filteredPlaces);
+    }
+
+    // Function to display results
+    function displayResults(places) {
+      const resultsDiv = document.getElementById('results');
+      
+      if (places.length === 0) {
+        resultsDiv.innerHTML = '<p>No emergency services found nearby.</p>';
+        return;
+      }
+
+      let html = '<h3>Nearby Emergency Services</h3>';
+      
+      places.forEach((place, index) => {
+        const rating = place.rating ? `⭐ ${place.rating}` : 'No rating';
+        const serviceIcon = getServiceIcon(place.serviceType);
+        const isOpen = place.opening_hours && place.opening_hours.open_now ? 
+          '<span class="open">Open now</span>' : 
+          place.opening_hours ? '<span class="closed">Closed</span>' : '';
+        
+        html += `
+          <div class="result-item ${place.serviceType}">
+            <div class="service-header">
+              <i class="${serviceIcon}"></i>
+              <h4>${place.name}</h4>
+            </div>
+            <p class="address">${place.vicinity}</p>
+            <div class="meta">
+              <span class="rating">${rating}</span>
+              ${isOpen}
+            </div>
+            <div class="actions">
+              <button onclick="getDirections(${place.geometry.location.lat}, ${place.geometry.location.lng})" class="direction-btn">
+                Get Directions
+              </button>
+              <button onclick="callService('${place.serviceType}')" class="call-btn">
+                Emergency Call
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      
+      resultsDiv.innerHTML = html;
+    }
+
+    // Function to get service icon
+    function getServiceIcon(serviceType) {
+      switch(serviceType) {
+        case 'police': return 'fas fa-shield-alt';
+        case 'hospital': return 'fas fa-plus-circle';
+        case 'fire_station': return 'fas fa-fire-extinguisher';
+        default: return 'fas fa-map-marker-alt';
+      }
+    }
+
+    // Function to display markers on map
+    function displayMarkersOnMap(places) {
+      // Clear existing markers (except user location)
+      markers.forEach(marker => marker.setMap(null));
+      markers = [];
+
+      // Add new markers
+      places.forEach((place, index) => {
+        let iconColor;
+        switch(place.serviceType) {
+          case 'police': iconColor = 'blue'; break;
+          case 'hospital': iconColor = 'red'; break;
+          case 'fire_station': iconColor = 'orange'; break;
+          default: iconColor = 'red';
+        }
+
+        const marker = new google.maps.Marker({
+          position: place.geometry.location,
+          map: map,
+          title: place.name,
+          icon: {
+            url: `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`
+          }
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div>
+              <strong>${place.name}</strong><br>
+              <em>${place.serviceType.replace('_', ' ').toUpperCase()}</em><br>
+              ${place.vicinity}<br>
+              ${place.rating ? `Rating: ${place.rating}⭐` : ''}
+            </div>
+          `
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        markers.push(marker);
+      });
+    }
+
+    // Function to send SOS
+    function sendSOS(type) {
+      const confirmSOS = confirm(`Are you sure you want to send an SOS alert to ${type.toUpperCase()}? This will notify emergency services.`);
+      
+      if (confirmSOS) {
+        const locationToUse = usingDefaultLocation ? defaultLocation : currentLocation;
+        
+        // Send SOS to backend
+        fetch('/sos/sendSOS', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: type,
+            location: locationToUse,
+            address: currentAddress,
+            timestamp: new Date().toISOString()
+          }),
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert(`SOS sent successfully! Emergency services have been notified.`);
+          console.log('SOS sent:', data);
+        })
+        .catch(error => {
+          console.error('Error sending SOS:', error);
+          alert('Error sending SOS. Please try calling directly.');
+        });
+
+        // Also call the emergency number
+        callService(type);
+      }
+    }
+
+    // Function to call emergency service
+    function callService(type) {
+      let number;
+      switch(type) {
+        case 'police': number = '100'; break;
+        case 'fire': case 'fire_station': number = '101'; break;
+        case 'ambulance': case 'hospital': number = '102'; break;
+        default: number = '112'; // General emergency
+      }
+      
+      window.open(`tel:${number}`, '_self');
+    }
+
+    // Function to get directions
+    function getDirections(lat, lng) {
+      const origin = usingDefaultLocation ? 
+        `${defaultLocation.lat},${defaultLocation.lng}` : 
+        `${currentLocation.lat},${currentLocation.lng}`;
+      const destination = `${lat},${lng}`;
+      
+      const url = `https://www.google.com/maps/dir/${origin}/${destination}`;
+      window.open(url, '_blank');
+    }
+
+    // Function to setup filter buttons
+    function setupFilterButtons() {
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const filterType = e.target.getAttribute('onclick').match(/'([^']+)'/)[1];
+          filterPlaces(filterType);
+        });
+      });
+    }
+
+    // Load Maps API via proxy
+    fetch('/api/maps-script?callback=initMap')
+      .then(response => response.text())
+      .then(script => {
+        eval(script);
+      })
+      .catch(error => {
+        console.error('Error loading maps:', error);
+      });
+  </script>
+
+  <!-- Font Awesome for icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+</body>
+</html>

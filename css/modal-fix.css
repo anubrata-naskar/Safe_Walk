@@ -1,0 +1,83 @@
+/* Modal Input Fix Styles */
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    padding: 0;
+    margin-bottom: 15px;
+}
+
+.input-with-icon i:first-child {
+    padding: 15px 12px;
+    color: #666;
+    background: #f8f9fa;
+    border-right: 1px solid #ddd;
+    border-radius: 8px 0 0 8px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.input-with-icon input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 15px 12px;
+    font-size: 16px;
+    background: transparent;
+    border-radius: 0 8px 8px 0;
+}
+
+.input-with-icon input:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.input-with-icon:focus-within {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    cursor: pointer;
+    color: #666;
+    padding: 5px;
+    border-radius: 3px;
+    transition: color 0.3s ease;
+}
+
+.toggle-password:hover {
+    color: #333;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Make sure inputs are clickable */
+.input-with-icon input {
+    pointer-events: auto;
+    cursor: text;
+}
+
+.input-with-icon input::placeholder {
+    color: #999;
+    opacity: 1;
+}
+
+/* Form group spacing */
+.form-group {
+    margin-bottom: 20px;
+}
+
+/* Ensure proper z-index for modal */
+.modal {
+    z-index: 1000;
+}
+
+.modal-content {
+    position: relative;
+    z-index: 1001;
+}

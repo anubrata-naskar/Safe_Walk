@@ -1,0 +1,556 @@
+/* Override any conflicting navbar styles from page-specific CSS */
+header {
+  margin: 0 !important;
+  padding: 1rem 2rem !important;
+}
+
+header h1 {
+  margin: 0 !important;
+}
+
+header nav {
+  margin: 0 !important;
+}
+
+header nav ul {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  background-color: #ffffff;
+  color: #4a4a4a;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
+  background-color: #ffffff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.logo {
+  height: 60px;
+  transition: transform 0.3s ease;
+}
+
+.heading {
+  font-size: 36px;
+  color: #333333;
+  margin-left: 20px;
+  font-weight: bold;
+  position: relative;
+  transition: font-size 0.3s ease;
+}
+
+.heading::after {
+  content: '';
+  width: 100px;
+  height: 5px;
+  background-color: #e74c3c;
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  border-radius: 5px;
+}
+
+.container {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.consolidated-results {
+  width: 40%;
+  max-height: 600px;
+  overflow-y: auto;
+  background: #f8f8f8;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.map {
+  width: 55%;
+  height: 600px;
+  background-color: #f5f5f5;
+  color: #333333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 3px solid #e74c3c;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.filter-options {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background-color: #f8f8f8;
+  margin: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
+}
+
+.filter-options span {
+  font-weight: bold;
+  color: #333333;
+}
+
+.filter-button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 20px;
+  background-color: #e0e0e0;
+  color: #333333;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filter-button:hover {
+  background-color: #d0d0d0;
+  transform: translateY(-2px);
+}
+
+.filter-button.active {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.result-item {
+  display: flex;
+  background-color: #ffffff;
+  padding: 15px;
+  color: #4a4a4a;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  border-left: 4px solid #e74c3c;
+  transition: all 0.3s ease;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideIn 0.5s forwards;
+}
+
+@keyframes slideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.result-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50px;
+  height: 50px;
+  background-color: #f0f0f0;
+  border-radius: 50%;
+  margin-right: 15px;
+  font-size: 20px;
+}
+
+.result-content {
+  flex: 1;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.result-item h3 {
+  margin: 0;
+  color: #333333;
+  font-size: 18px;
+}
+
+.place-type {
+  font-size: 12px;
+  color: white;
+  background-color: #333333;
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+
+.result-item p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.distance {
+  font-weight: bold;
+  color: #e74c3c;
+}
+
+.open-now {
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+.phone-number {
+  font-weight: bold;
+  color: #333333;
+}
+
+/* Styling for specific place types */
+.result-item.police .result-icon {
+  background-color: #3498db;
+  color: white;
+}
+
+.result-item.stations .result-icon {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.result-item.healthcare .result-icon {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.result-item.shops .result-icon {
+  background-color: #9b59b6;
+  color: white;
+}
+
+.result-item.restaurants .result-icon {
+  background-color: #f39c12;
+  color: white;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.current-address {
+  background-color: #f8f8f8;
+  padding: 10px;
+  margin: 10px 20px;
+  border-radius: 10px;
+  color: #333333;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.sms-button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 8px;
+  transition: all 0.3s ease;
+  width: fit-content;
+}
+
+.sms-button:hover {
+  background-color: #c0392b;
+  transform: translateY(-2px);
+}
+
+.location-status {
+  background-color: #fff8e1;
+  padding: 10px;
+  margin: 10px 20px;
+  border-radius: 10px;
+  border-left: 4px solid #ffa000;
+  color: #333333;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.location-status button {
+  background-color: #ffa000;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.location-status button:hover {
+  background-color: #ff8f00;
+}
+
+/* Additional styling for the emergency section (already defined in your script) */
+.emergency-section {
+  background-color: #f8f8f8;
+  padding: 15px;
+  margin: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.emergency-section h3 {
+  margin-top: 0;
+  color: #333333;
+  text-align: center;
+}
+
+.emergency-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.emergency-button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 20px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+
+.emergency-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.emergency-button.police {
+  background-color: #3498db;
+}
+
+.emergency-button.ambulance {
+  background-color: #e74c3c;
+}
+
+.emergency-button.fire {
+  background-color: #e67e22;
+}
+
+.emergency-button.women {
+  background-color: #9b59b6;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+  
+  .consolidated-results, .map {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  
+  .map {
+    height: 400px;
+  }
+  
+  .filter-options {
+    overflow-x: auto;
+    padding: 10px;
+  }
+  
+  .filter-button {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  .result-item {
+    padding: 12px;
+  }
+}
+
+/* Animated pulse effect for SOS */
+.sos-header {
+  background-color: #e74c3c;
+  color: white;
+  text-align: center;
+  padding: 15px;
+  margin: 10px 20px;
+  border-radius: 10px;
+  font-weight: bold;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.sos-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle, transparent 30%, rgba(255,255,255,0.1) 70%);
+  transform: scale(0);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Enhanced animations for result items */
+.result-item.police {
+  border-left-color: #3498db;
+}
+
+.result-item.stations {
+  border-left-color: #2ecc71;
+}
+
+.result-item.healthcare {
+  border-left-color: #e74c3c;
+}
+
+.result-item.shops {
+  border-left-color: #9b59b6;
+}
+
+.result-item.restaurants {
+  border-left-color: #f39c12;
+}
+
+/* Additional animations for results */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 30px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.result-item {
+  animation: fadeInUp 0.5s forwards;
+}
+
+/* Shimmer effect for loading items */
+.loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0) 0%, 
+    rgba(255,255,255,0.2) 50%, 
+    rgba(255,255,255,0) 100%);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Subtle hover effects for map markers */
+.gm-style-iw {
+  padding: 12px !important;
+  border-radius: 10px !important;
+}
+
+/* Legend for map markers */
+.map-legend {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background-color: white;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  font-size: 12px;
+  z-index: 100;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.legend-color {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.legend-color.police {
+  background-color: #3498db;
+}
+
+.legend-color.stations {
+  background-color: #2ecc71;
+}
+
+.legend-color.healthcare {
+  background-color: #e74c3c;
+}
+
+.legend-color.shops {
+  background-color: #9b59b6;
+}
+
+.legend-color.restaurants {
+  background-color: #f39c12;
+}
+
+.shrink .logo {
+  transform: scale(0.6);
+}
+
+.shrink .heading {
+  font-size: 24px;
+}

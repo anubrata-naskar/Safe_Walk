@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safe-Walk - Location Selection</title>
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="navbar">
+    <div class="nav-brand">Safe-Walk</div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="safety.html" class="active">Safety</a></li>
+      <li><a href="Services.html">Services</a></li>
+      <li><a href="Sos.html">SOS</a></li>
+    </ul>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <h1>Select Your Location</h1>
+      <p>Choose your current location or destination to find nearby safety services</p>
+    </div>
+
+    <div class="content">
+      <div class="search-section">
+        <div class="search-container">
+          <input type="text" id="search-location" placeholder="Search for a location..." />
+          <button type="button" id="use-current-location" class="location-btn">
+            📍 Use Current Location
+          </button>
+        </div>
+      </div>
+
+      <div class="map-container">
+        <div id="map"></div>
+      </div>
+
+      <div class="location-form">
+        <form id="location-form">
+          <div class="form-group">
+            <label for="selected-location">Selected Location:</label>
+            <input type="text" id="selected-location" readonly placeholder="No location selected" />
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="lat">Latitude:</label>
+              <input type="text" id="lat" readonly />
+            </div>
+            <div class="form-group">
+              <label for="lng">Longitude:</label>
+              <input type="text" id="lng" readonly />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="submit-btn">Save Location</button>
+            <button type="button" class="clear-btn" onclick="clearLocation()">Clear</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Load Maps API via proxy
+    fetch('/api/maps-script?callback=initMap&libraries=places')
+      .then(response => response.text())
+      .then(script => {
+        eval(script);
+      })
+      .catch(error => {
+        console.error('Error loading maps:', error);
+        alert('Error loading Google Maps. Please check your connection and try again.');
+      });
+  </script>
+  <script src="main.js"></script>
+</body>
+</html>

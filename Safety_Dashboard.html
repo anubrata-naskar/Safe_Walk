@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Safety Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e0f5f2; /* Changed to match the teal/mint from the images */
+      text-align: center;
+    }
+    
+    .header {
+      padding: 30px 20px 10px;
+    }
+    
+    .header img {
+      height: 70px;
+    }
+    
+    .dashboard-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    
+    .dashboard-icon {
+      height: 40px;
+      width: 40px;
+      margin-right: 10px;
+    }
+    
+    /* Enhanced premium dashboard title */
+    .heading {
+      position: relative;
+      display: inline-block;
+      background: linear-gradient(90deg, #2ab7a9, #45d6c8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-size: 38px;
+      font-weight: bold;
+      padding: 0.5rem 0;
+      letter-spacing: 1px;
+      animation: premium-glow 3s infinite alternate;
+      text-transform: uppercase;
+    }
+    
+    /* Premium glow animation */
+    @keyframes premium-glow {
+      0% {
+        text-shadow: 0 0 5px rgba(42, 183, 169, 0.3), 0 0 15px rgba(42, 183, 169, 0);
+      }
+      50% {
+        text-shadow: 0 0 10px rgba(42, 183, 169, 0.5), 0 0 25px rgba(42, 183, 169, 0.3);
+      }
+      100% {
+        text-shadow: 0 0 15px rgba(42, 183, 169, 0.7), 0 0 35px rgba(42, 183, 169, 0.5);
+      }
+    }
+    
+    /* Add a subtle underline animation */
+    .heading::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      width: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #45d6c8, transparent);
+      transform: translateX(-50%);
+      animation: underline-expand 3s ease-in-out infinite;
+    }
+    
+    @keyframes underline-expand {
+      0%, 100% {
+        width: 30%;
+        opacity: 0.5;
+      }
+      50% {
+        width: 80%;
+        opacity: 1;
+      }
+    }
+    
+    .buttons-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 50px;
+      margin: 50px 20px;
+    }
+    
+    .icon-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Make both images exactly the same size */
+    .icon-box img {
+      width: 220px;
+      height: 220px;
+      object-fit: cover;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      transition: transform 0.5s ease;
+    }
+    
+    .icon-box span {
+      margin-top: 15px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #333;
+      transition: color 0.3s;
+    }
+    
+    .icon-box:hover img {
+      transform: scale(1.05);
+    }
+    
+    .icon-box:hover span {
+      color: #2ab7a9; /* Changed to match the teal/mint theme */
+    }
+    
+    .icon-box::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(42, 183, 169, 0.1); /* Changed to match the teal/mint theme */
+      opacity: 0;
+      transition: opacity 0.3s;
+      border-radius: 20px;
+      pointer-events: none;
+    }
+    
+    .icon-box:hover::after {
+      opacity: 1;
+    }
+    
+    @media (max-width: 768px) {
+      .buttons-container {
+        flex-direction: column;
+        gap: 30px;
+      }
+      
+      .heading {
+        font-size: 32px;
+      }
+      
+      .dashboard-icon {
+        height: 32px;
+        width: 32px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <!-- Preserving original image source path -->
+    <img src="./logo/logo.png" alt="Safe Walk Logo">
+    <!-- Dashboard title with icon -->
+    <div class="dashboard-container">
+      <div class="heading">Safety Dashboard</div>
+    </div>
+  </div>
+  
+  <div class="buttons-container">
+    <!-- Preserving original links and image paths -->
+    <div class="icon-box" onclick="location.href='safety.html'">
+      <img src="./logo/service1.png" alt="Safety Score">
+      <span>Safety Score</span>
+    </div>
+    <div class="icon-box" onclick="location.href='Services.html'">
+      <img src="./logo/service2.png" alt="Access Services">
+      <span>Access our Services</span>
+    </div>
+    <div class="icon-box" onclick="location.href='Sos.html'">
+      <img src="./logo/service3.png" alt="Access Services">
+      <span>SOS</span>
+    </div>
+  </div>
+
+  <script>
+    // Enhanced animation for the dashboard elements
+    document.addEventListener('DOMContentLoaded', function() {
+      const iconBoxes = document.querySelectorAll('.icon-box');
+      
+      iconBoxes.forEach((box, index) => {
+        // Set initial state
+        box.style.opacity = '0';
+        box.style.transform = 'translateY(30px)';
+        
+        // Animate in
+        setTimeout(() => {
+          box.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+          box.style.opacity = '1';
+          box.style.transform = 'translateY(0)';
+        }, 300 + (index * 200));
+      });
+      
+      // Add premium animation for the dashboard title
+      const dashboardTitle = document.querySelector('.heading');
+      dashboardTitle.style.opacity = '0';
+      dashboardTitle.style.transform = 'translateY(-20px) scale(0.95)';
+      
+      setTimeout(() => {
+        dashboardTitle.style.transition = 'opacity 1.2s ease, transform 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        dashboardTitle.style.opacity = '1';
+        dashboardTitle.style.transform = 'translateY(0) scale(1)';
+      }, 200);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4eaff;
+    color: #4c2954;
+  }
+  h1{
+    color: #426c36;
+  }
+  
+  .container {
+    width: 90%;
+    padding: 80px 80px;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .header {
+    margin-bottom: 20px;
+  }
+  
+  .logo {
+    width: 100px;
+    position: absolute;  /* Take it out of normal flow */
+    top: 40px;            /* Distance from the top */
+    left: 50px;           /* Distance from the left */
+  }
+  
+  
+  .heading-img {
+    width: 300px;
+    margin-bottom: 10px;
+  }
+  
+  
+  .content {
+    text-align: left;
+    font-size: 25px;
+    line-height: 1.8;
+    margin-top: 20px;
+    text-align: justify;
+  }
+  
+  .footer {
+    margin-top: 30px;
+  }
+  
+  .illustration {
+    width: 100%;
+    max-width: fit-content; /* or any value that looks good */
+    height: auto;
+    margin-top: 25px;
+  }
+  

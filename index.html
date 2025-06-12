@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe-walk | Women's Safety Navigation</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img id="logo-img" src="./logo/logo.png" alt="Safe-walk Logo">
+        </div>
+        <nav>
+            <div class="hamburger">
+                <div class="line"></div>
+                <div class="line"></div>
+                <div class="line"></div>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#" class="active">Home</a></li>
+                <li><a href="./about.html">About Us</a></li>
+                <li><a href="./contact_us.html">Contact Us</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="hero-content">
+                <h1>Safe-walk</h1>
+                <h2>Women's Safety Navigation</h2>
+                <p>Navigate with Confidence. Your Safety, Our Priority.</p>
+                <div class="cta-buttons">
+                    <button id="register-btn" class="btn register">REGISTER</button>
+                    <button id="login-btn" class="btn login">LOG IN</button>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img id="hero-img" src="./logo/Screenshot 2025-04-13 at 6.56.08 PM.png"
+                    alt="Women walking safely together">
+            </div>
+        </section>
+    </main>
+
+   <!-- Modal for Login -->
+<div id="login-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div class="login-header">
+            <h1><i class="fas fa-arrow-right-to-bracket"></i></h1><br/>
+            <h2>Sign in with email</h2>
+        </div>
+        <p class="login-description">Navigate with Confidence</p>
+        <form id="login-form">
+            <div class="form-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="login-email" placeholder="Email" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="login-password" placeholder="Password" required>
+                    <i class="fas fa-eye-slash toggle-password" onclick="togglePassword('login-password', this)"></i>
+                </div>
+            </div>
+            <div class="forgot-password">
+                <a href="#">Forgot password?</a>
+            </div>
+            <div class="form-group">
+    <button type="button" class="btn submit" onclick="window.location.href='safety.html'">Get Started</button>
+</div>
+            <p class="form-footer">Or sign in with</p>
+            <div class="social-login">
+                <button type="button" class="social-btn google">
+                    <i class="fab fa-google"></i>
+                </button>
+                <button type="button" class="social-btn facebook">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/1024px-Facebook_Logo_%282019%29.png" alt="Facebook">
+                </button>
+                <button type="button" class="social-btn apple">
+                    <i class="fab fa-apple"></i>
+                </button>
+            </div>
+            <p class="form-footer">Don't have an account? <a href="#" id="switch-to-register">Register here</a></p>
+        </form>
+    </div>
+</div>
+
+<!-- Modal for Register -->
+<div id="register-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div class="login-header">
+            <h2>Create your account</h2>
+        </div>
+        <p class="login-description">Join Safe-walk to navigate with confidence</p>
+        <form id="register-form">
+            <div class="form-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="register-name" placeholder="Full Name" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-calendar"></i>
+                    <input type="number" id="register-age" placeholder="Age" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="register-email" placeholder="Email" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-phone"></i>
+                    <input type="tel" id="register-contact" placeholder="Contact No" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-phone-alt"></i>
+                    <input type="tel" id="register-emergency" placeholder="Emergency Contact No" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="register-password" placeholder="Password" required>
+                    <i class="fas fa-eye-slash toggle-password" onclick="togglePassword('register-password', this)"></i>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-with-icon">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="register-confirm-password" placeholder="Confirm Password" required>
+                    <i class="fas fa-eye-slash toggle-password" onclick="togglePassword('register-confirm-password', this)"></i>
+                </div>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn submit">Register</button>
+            </div>
+            <p class="form-footer">Or sign up with</p>
+            <div class="social-login">
+                <button type="button" class="social-btn google">
+                    <i class="fab fa-google"></i>
+                </button>
+                <button type="button" class="social-btn facebook">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/1024px-Facebook_Logo_%282019%29.png" alt="Facebook">
+                </button>
+                <button type="button" class="social-btn apple">
+                    <i class="fab fa-apple"></i>
+                </button>
+            </div>
+            <p class="form-footer">Already have an account? <a href="#" id="switch-to-login">Log in here</a></p>
+        </form>
+    </div>
+</div>
+
+    <footer>
+        <p>&copy; 2025 Safe-walk. All rights reserved.</p>
+    </footer>
+
+    <script>
+    // Simple static version - no backend required
+    document.addEventListener('DOMContentLoaded', function() {
+        const loginBtn = document.getElementById('login-btn');
+        const loginModal = document.getElementById('login-modal');
+        const closeBtns = document.querySelectorAll('.close');
+
+        if (loginBtn) {
+            loginBtn.addEventListener('click', function() {
+                loginModal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            });
+        }
+
+        closeBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                loginModal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            });
+        });
+
+        // Direct navigation to safety page
+        const getStartedBtn = document.querySelector('.btn.submit');
+        if (getStartedBtn) {
+            getStartedBtn.addEventListener('click', function() {
+                window.location.href = 'safety.html';
+            });
+        }
+    });
+    </script>
+</body>
+
+</html>
