@@ -54,27 +54,38 @@
     const defaultLocation = { lat: 22.525870, lng: 88.334175 };
     let markers = [];
     let usingDefaultLocation = true;
+    let geocoder;
+    let placesService;
  
     // Function to initialize the map
     function initMap() {
+      console.log('Initializing Google Maps...');
+      
       // Initialize the map with default location
       map = new google.maps.Map(document.getElementById("map"), {
         zoom: 15,
         center: defaultLocation,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true
       });
+      
+      // Initialize geocoder and places service
+      geocoder = new google.maps.Geocoder();
+      placesService = new google.maps.places.PlacesService(map);
       
       // Add a marker at the default location
       const defaultMarker = new google.maps.Marker({
         position: defaultLocation,
         map: map,
-        title: "Default Location",
+        title: "Default Location (Kolkata)",
         icon: {
           url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
         }
       });
       
-      // Send default location to the backend immediately
-      sendLocationData(defaultLocation.lat, defaultLocation.lng);
+      // Save default location to localStorage
+      saveLocationData(defaultLocation.lat, defaultLocation.lng);
       
       // Get the address for default location
       getAddressFromCoordinates(defaultLocation.lat, defaultLocation.lng);
@@ -82,29 +93,32 @@
       // Load initial places based on default location
       setTimeout(() => {
         fetchNearbyPlaces('Police Stations', document.querySelector('.button'));
-      }, 500);
+      }, 1000);
       
       // Try to get the user's current location in the background
       if (navigator.geolocation) {
+        document.getElementById('location-status').textContent = 'Getting your location...';
+        
         navigator.geolocation.getCurrentPosition(
           function (position) {
+            console.log('User location obtained successfully');
             // Success: update the current location
             currentLocation.lat = position.coords.latitude;
             currentLocation.lng = position.coords.longitude;
             usingDefaultLocation = false;
             
-            // Send the updated location to the backend
-            sendLocationData(currentLocation.lat, currentLocation.lng);
+            // Save the updated location
+            saveLocationData(currentLocation.lat, currentLocation.lng);
             
             // Update the map to center at the user's location
             map.setCenter(currentLocation);
             
-            // Clear previous markers and add a new one at the current location
+            // Clear previous default marker and add a new one at the current location
             defaultMarker.setMap(null);
-            const marker = new google.maps.Marker({
+            const userMarker = new google.maps.Marker({
               position: currentLocation,
               map: map,
-              title: "You are here",
+              title: "Your Current Location",
               icon: {
                 url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
               }
@@ -124,63 +138,53 @@
           },
           function (error) {
             console.log("Unable to retrieve your location:", error.message);
+            document.getElementById('location-status').textContent = 'Using default location (Kolkata). ' + currentAddress;
             // Continue using default location, which is already set up
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
           }
         );
       } else {
         console.log("Geolocation is not supported by this browser.");
-        // Continue using default location, which is already set up
+        document.getElementById('location-status').textContent = 'Geolocation not supported. Using default location.';
       }
+      
+      console.log('Map initialization complete');
     }
  
-    // Function to send the location to the backend
-    async function sendLocationData(latitude, longitude) {
+    // Function to save location data to localStorage (no backend needed)
+    function saveLocationData(latitude, longitude) {
       try {
-        const response = await fetch('/location/saveLocation', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            latitude: latitude,
-            longitude: longitude,
-          }),
-        });
- 
-        const data = await response.json();
-        console.log('Location saved:', data);
+        const locationData = {
+          latitude: latitude,
+          longitude: longitude,
+          timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('userLocation', JSON.stringify(locationData));
+        console.log('Location saved to localStorage:', locationData);
       } catch (error) {
-        console.error('Error sending location data:', error);
+        console.error('Error saving location data:', error);
       }
     }
  
-    // Function to get the address from the coordinates using proxy
-    async function getAddressFromCoordinates(lat, lng) {
-      try {
-        const response = await fetch('/api/geocode', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            location: { lat, lng }
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.status === 'OK' && data.results[0]) {
-          currentAddress = data.results[0].formatted_address;
+    // Function to get the address from coordinates using Google Geocoding API
+    function getAddressFromCoordinates(lat, lng) {
+      const latlng = { lat: lat, lng: lng };
+      
+      geocoder.geocode({ location: latlng }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+          currentAddress = results[0].formatted_address;
           console.log('Address fetched:', currentAddress);
           displayAddress(currentAddress, usingDefaultLocation);
         } else {
-          console.error('No results found for the given coordinates.');
-          displayAddress('No address found for the given location', usingDefaultLocation);
+          console.error('Geocoding failed:', status);
+          const fallbackAddress = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+          displayAddress(fallbackAddress, usingDefaultLocation);
         }
-      } catch (error) {
-        console.error('Geocoding failed:', error);
-        displayAddress('Geocoding failed. Please try again later', usingDefaultLocation);
-      }
+      });
     }
 
     // Function to display the address
@@ -190,8 +194,10 @@
       locationStatus.textContent = prefix + address;
     }
 
-    // Function to fetch nearby places using proxy
-    async function fetchNearbyPlaces(category, buttonElement) {
+    // Function to fetch nearby places using Google Places API
+    function fetchNearbyPlaces(category, buttonElement) {
+      console.log('Fetching nearby places for:', category);
+      
       // Remove active class from all buttons
       document.querySelectorAll('.button').forEach(btn => {
         btn.classList.remove('active-button');
@@ -202,58 +208,47 @@
 
       const locationToUse = usingDefaultLocation ? defaultLocation : currentLocation;
       
-      try {
-        let keyword, type;
-        
-        switch(category) {
-          case 'Police Stations':
-            keyword = 'police station';
-            type = 'police';
-            break;
-          case 'Hospitals':
-            keyword = 'hospital';
-            type = 'hospital';
-            break;
-          case 'Fire Stations':
-            keyword = 'fire station';
-            type = 'fire_station';
-            break;
-          case 'ATMs':
-            keyword = 'ATM';
-            type = 'atm';
-            break;
-          case 'Gas Stations':
-            keyword = 'gas station';
-            type = 'gas_station';
-            break;
-        }
-
-        const response = await fetch('/api/places/nearby', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            location: locationToUse,
-            radius: 5000,
-            type: type,
-            keyword: keyword
-          })
-        });
-
-        const data = await response.json();
-        
-        if (data.status === 'OK') {
-          displayResults(data.results, category);
-          displayMarkersOnMap(data.results);
-        } else {
-          console.error('Places API error:', data.status);
-          document.getElementById('results').innerHTML = '<p>Error fetching places. Please try again.</p>';
-        }
-      } catch (error) {
-        console.error('Error fetching places:', error);
-        document.getElementById('results').innerHTML = '<p>Error fetching places. Please try again.</p>';
+      let type;
+      
+      switch(category) {
+        case 'Police Stations':
+          type = 'police';
+          break;
+        case 'Hospitals':
+          type = 'hospital';
+          break;
+        case 'Fire Stations':
+          type = 'fire_station';
+          break;
+        case 'ATMs':
+          type = 'atm';
+          break;
+        case 'Gas Stations':
+          type = 'gas_station';
+          break;
+        default:
+          type = 'police';
       }
+
+      const request = {
+        location: locationToUse,
+        radius: 5000,
+        type: type
+      };
+
+      // Show loading message
+      document.getElementById('results').innerHTML = '<p>Loading nearby ' + category.toLowerCase() + '...</p>';
+
+      placesService.nearbySearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+          console.log('Places found:', results.length);
+          displayResults(results, category);
+          displayMarkersOnMap(results);
+        } else {
+          console.error('Places API error:', status);
+          document.getElementById('results').innerHTML = `<p>Error fetching ${category.toLowerCase()}. Please try again.</p>`;
+        }
+      });
     }
 
     // Function to display results
@@ -265,25 +260,37 @@
         return;
       }
 
-      let html = `<h3>Nearby ${category}</h3>`;
+      let html = `<h3>Nearby ${category} (${places.length} found)</h3>`;
       
       places.forEach((place, index) => {
         const rating = place.rating ? `⭐ ${place.rating}` : 'No rating';
-        const isOpen = place.opening_hours && place.opening_hours.open_now ? 
-          '<span class="open">Open now</span>' : 
-          place.opening_hours ? '<span class="closed">Closed</span>' : '';
+        const priceLevel = place.price_level ? '💰'.repeat(place.price_level) : '';
+        const isOpen = place.opening_hours ? 
+          (place.opening_hours.open_now ? '<span class="open">Open now</span>' : '<span class="closed">Closed</span>') : 
+          '<span class="unknown">Hours unknown</span>';
+        
+        // Calculate distance (approximate)
+        const distance = calculateDistance(
+          usingDefaultLocation ? defaultLocation : currentLocation,
+          place.geometry.location
+        );
         
         html += `
           <div class="result-item">
             <h4>${place.name}</h4>
-            <p class="address">${place.vicinity}</p>
+            <p class="address">${place.vicinity || 'Address not available'}</p>
             <div class="meta">
               <span class="rating">${rating}</span>
+              ${priceLevel}
+              <span class="distance">${distance}</span>
               ${isOpen}
             </div>
             <div class="actions">
-              <button onclick="getDirections(${place.geometry.location.lat}, ${place.geometry.location.lng})" class="direction-btn">
-                Get Directions
+              <button onclick="getDirections(${place.geometry.location.lat()}, ${place.geometry.location.lng()})" class="direction-btn">
+                🧭 Get Directions
+              </button>
+              <button onclick="showPlaceDetails('${place.place_id}')" class="details-btn">
+                ℹ️ Details
               </button>
             </div>
           </div>
@@ -293,39 +300,147 @@
       resultsDiv.innerHTML = html;
     }
 
+    // Function to calculate distance between two points
+    function calculateDistance(point1, point2) {
+      const lat1 = point1.lat;
+      const lng1 = point1.lng;
+      const lat2 = typeof point2.lat === 'function' ? point2.lat() : point2.lat;
+      const lng2 = typeof point2.lng === 'function' ? point2.lng() : point2.lng;
+      
+      const R = 6371; // Radius of the Earth in kilometers
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      const distance = R * c;
+      
+      if (distance < 1) {
+        return Math.round(distance * 1000) + 'm';
+      } else {
+        return distance.toFixed(1) + 'km';
+      }
+    }
+
+    // Function to show place details
+    function showPlaceDetails(placeId) {
+      const request = {
+        placeId: placeId,
+        fields: ['name', 'formatted_address', 'formatted_phone_number', 'website', 'opening_hours', 'rating', 'reviews']
+      };
+
+      placesService.getDetails(request, (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+          let detailsHtml = `
+            <div class="place-details">
+              <h3>${place.name}</h3>
+              <p><strong>Address:</strong> ${place.formatted_address || 'Not available'}</p>
+              ${place.formatted_phone_number ? `<p><strong>Phone:</strong> ${place.formatted_phone_number}</p>` : ''}
+              ${place.website ? `<p><strong>Website:</strong> <a href="${place.website}" target="_blank">${place.website}</a></p>` : ''}
+              ${place.rating ? `<p><strong>Rating:</strong> ${place.rating} ⭐</p>` : ''}
+              ${place.opening_hours ? `
+                <div class="opening-hours">
+                  <strong>Opening Hours:</strong>
+                  <ul>
+                    ${place.opening_hours.weekday_text.map(day => `<li>${day}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              <button onclick="closeDetails()" class="close-btn">Close</button>
+            </div>
+          `;
+          
+          // Create modal or update results area
+          document.getElementById('results').innerHTML = detailsHtml;
+        } else {
+          console.error('Place details error:', status);
+          alert('Could not load place details.');
+        }
+      });
+    }
+
+    // Function to close details view
+    function closeDetails() {
+      // Reload the current category
+      const activeButton = document.querySelector('.button.active-button');
+      if (activeButton) {
+        const category = activeButton.textContent.trim();
+        fetchNearbyPlaces(category, activeButton);
+      }
+    }
+
     // Function to display markers on map
     function displayMarkersOnMap(places) {
-      // Clear existing markers
+      // Clear existing markers (except user location marker)
       markers.forEach(marker => marker.setMap(null));
       markers = [];
 
-      // Add new markers
+      // Add new markers for places
       places.forEach((place, index) => {
         const marker = new google.maps.Marker({
           position: place.geometry.location,
           map: map,
           title: place.name,
           icon: {
-            url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+            url: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png',
+            scaledSize: new google.maps.Size(32, 32)
           }
         });
 
         const infoWindow = new google.maps.InfoWindow({
           content: `
-            <div>
+            <div style="max-width: 250px;">
               <strong>${place.name}</strong><br>
-              ${place.vicinity}<br>
-              ${place.rating ? `Rating: ${place.rating}⭐` : ''}
+              <small>${place.vicinity || 'Address not available'}</small><br>
+              ${place.rating ? `Rating: ${place.rating} ⭐<br>` : ''}
+              ${place.opening_hours ? 
+                (place.opening_hours.open_now ? '<span style="color: green;">Open now</span>' : '<span style="color: red;">Closed</span>') : 
+                ''
+              }
+              <br><br>
+              <button onclick="getDirections(${place.geometry.location.lat()}, ${place.geometry.location.lng()})" 
+                      style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
+                Get Directions
+              </button>
             </div>
           `
         });
 
         marker.addListener('click', () => {
+          // Close all other info windows
+          markers.forEach(m => {
+            if (m.infoWindow) {
+              m.infoWindow.close();
+            }
+          });
           infoWindow.open(map, marker);
         });
 
+        marker.infoWindow = infoWindow;
         markers.push(marker);
       });
+
+      // Adjust map bounds to show all markers
+      if (places.length > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        
+        // Include user location
+        const userLocation = usingDefaultLocation ? defaultLocation : currentLocation;
+        bounds.extend(userLocation);
+        
+        // Include all place markers
+        places.forEach(place => {
+          bounds.extend(place.geometry.location);
+        });
+        
+        map.fitBounds(bounds);
+        
+        // Don't zoom in too much for a single place
+        if (places.length === 1) {
+          map.setZoom(Math.min(map.getZoom(), 16));
+        }
+      }
     }
 
     // Function to get directions
@@ -339,15 +454,11 @@
       window.open(url, '_blank');
     }
 
-    // Load Maps API via proxy
-    fetch('/api/maps-script?callback=initMap')
-      .then(response => response.text())
-      .then(script => {
-        eval(script);
-      })
-      .catch(error => {
-        console.error('Error loading maps:', error);
-      });
+    // Make initMap available globally
+    window.initMap = initMap;
   </script>
+
+  <!-- Load Google Maps API with Places library -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=REPLACE_WITH_YOUR_API_KEY&callback=initMap&libraries=places" async defer></script>
 </body>
 </html>
