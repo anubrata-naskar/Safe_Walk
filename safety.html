@@ -6,6 +6,131 @@
   <title>Safe-Walk - Location Selection</title>
   <link rel="stylesheet" href="css/navbar.css">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .search-section {
+      margin-bottom: 20px;
+    }
+    
+    .search-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    #search-location {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    
+    .location-btn {
+      padding: 12px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    .location-btn:hover {
+      background-color: #0056b3;
+    }
+    
+    .map-container {
+      height: 400px;
+      width: 100%;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    
+    .location-form {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .form-row .form-group {
+      flex: 1;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .submit-btn {
+      background-color: #28a745;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    .submit-btn:hover {
+      background-color: #218838;
+    }
+    
+    .clear-btn {
+      background-color: #6c757d;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    .clear-btn:hover {
+      background-color: #5a6268;
+    }
+  </style>
 </head>
 <body>
   <div class="navbar">
@@ -66,17 +191,154 @@
   </div>
 
   <script>
-    // Load Maps API via proxy
-    fetch('/api/maps-script?callback=initMap&libraries=places')
-      .then(response => response.text())
-      .then(script => {
-        eval(script);
-      })
-      .catch(error => {
-        console.error('Error loading maps:', error);
-        alert('Error loading Google Maps. Please check your connection and try again.');
+    let map;
+    let marker;
+    let autocomplete;
+    let geocoder;
+
+    // Initialize the map
+    function initMap() {
+      console.log('Initializing Google Maps...');
+      
+      // Default location (Kolkata)
+      const defaultLocation = { lat: 22.5726, lng: 88.3639 };
+      
+      // Create the map
+      map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 13,
+        center: defaultLocation,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true
       });
+
+      // Initialize geocoder
+      geocoder = new google.maps.Geocoder();
+
+      // Initialize autocomplete for search input
+      const searchInput = document.getElementById('search-location');
+      autocomplete = new google.maps.places.Autocomplete(searchInput);
+      autocomplete.bindTo('bounds', map);
+
+      // Create initial marker
+      marker = new google.maps.Marker({
+        position: defaultLocation,
+        map: map,
+        draggable: true,
+        title: 'Selected Location'
+      });
+
+      // Add click listener to map
+      map.addListener('click', function(event) {
+        placeMarker(event.latLng);
+        updateLocationInfo(event.latLng);
+      });
+
+      // Add drag listener to marker
+      marker.addListener('dragend', function(event) {
+        updateLocationInfo(event.latLng);
+      });
+
+      // Add autocomplete listener
+      autocomplete.addListener('place_changed', function() {
+        const place = autocomplete.getPlace();
+        if (place.geometry) {
+          map.setCenter(place.geometry.location);
+          map.setZoom(15);
+          placeMarker(place.geometry.location);
+          updateLocationInfo(place.geometry.location, place.formatted_address);
+        }
+      });
+
+      console.log('Google Maps initialized successfully');
+    }
+
+    // Place or move marker
+    function placeMarker(location) {
+      marker.setPosition(location);
+    }
+
+    // Update location information
+    function updateLocationInfo(location, address = null) {
+      const lat = location.lat();
+      const lng = location.lng();
+      
+      document.getElementById('lat').value = lat.toFixed(6);
+      document.getElementById('lng').value = lng.toFixed(6);
+      
+      if (address) {
+        document.getElementById('selected-location').value = address;
+      } else {
+        // Reverse geocoding to get address
+        geocoder.geocode({ location: location }, function(results, status) {
+          if (status === 'OK' && results[0]) {
+            document.getElementById('selected-location').value = results[0].formatted_address;
+          } else {
+            document.getElementById('selected-location').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          }
+        });
+      }
+    }
+
+    // Use current location
+    document.getElementById('use-current-location').addEventListener('click', function() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          const currentLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          
+          map.setCenter(currentLocation);
+          map.setZoom(15);
+          placeMarker(currentLocation);
+          updateLocationInfo(currentLocation);
+        }, function(error) {
+          console.error('Error getting current location:', error);
+          alert('Error getting your current location. Please try again or search manually.');
+        });
+      } else {
+        alert('Geolocation is not supported by this browser.');
+      }
+    });
+
+    // Clear location
+    function clearLocation() {
+      document.getElementById('selected-location').value = '';
+      document.getElementById('lat').value = '';
+      document.getElementById('lng').value = '';
+      document.getElementById('search-location').value = '';
+      
+      // Reset map to default location
+      const defaultLocation = { lat: 22.5726, lng: 88.3639 };
+      map.setCenter(defaultLocation);
+      map.setZoom(13);
+      marker.setPosition(defaultLocation);
+    }
+
+    // Handle form submission
+    document.getElementById('location-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const location = document.getElementById('selected-location').value;
+      const lat = document.getElementById('lat').value;
+      const lng = document.getElementById('lng').value;
+      
+      if (!location || !lat || !lng) {
+        alert('Please select a location first.');
+        return;
+      }
+      
+      // Here you can save the location data
+      console.log('Saving location:', { location, lat, lng });
+      alert('Location saved successfully!');
+    });
+
+    // Make initMap available globally
+    window.initMap = initMap;
   </script>
-  <script src="main.js"></script>
+
+  <!-- Load Google Maps API -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=REPLACE_WITH_YOUR_API_KEY&callback=initMap&libraries=places" async defer></script>
 </body>
 </html>
