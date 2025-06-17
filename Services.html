@@ -34,6 +34,16 @@
           <button class="button" onclick="fetchNearbyPlaces('ATMs', this)">ATMs</button>
           <button class="button" onclick="fetchNearbyPlaces('Gas Stations', this)">Gas Stations</button>
         </div>
+        
+        <!-- Add location control buttons -->
+        <div class="location-controls">
+          <button id="use-current-location" class="location-btn" onclick="requestCurrentLocation()">
+            📍 Use Current Location
+          </button>
+          <button id="use-default-location" class="location-btn" onclick="useDefaultLocation()">
+            🏠 Use Default Location
+          </button>
+        </div>
       </div>
 
       <div class="content-wrapper">
@@ -57,6 +67,7 @@
     let geocoder;
     let placesService;
     let userLocationMarker = null;
+    let defaultLocationMarker = null;
  
     // Function to initialize the map
     function initMap() {
@@ -76,7 +87,7 @@
       placesService = new google.maps.places.PlacesService(map);
       
       // Add a marker at the default location
-      const defaultMarker = new google.maps.Marker({
+      defaultLocationMarker = new google.maps.Marker({
         position: defaultLocation,
         map: map,
         title: "Default Location (Kolkata)",
@@ -90,41 +101,65 @@
       
       console.log('Map initialization complete');
       
-      // Immediately try to get user's location
-      getUserLocation();
+      // Update button states
+      updateLocationButtons();
+      
+      // Try to get user's location automatically but don't force it
+      tryAutoLocation();
     }
 
-    // Function to get user's current location
-    function getUserLocation() {
+    // Function to try getting location automatically (less aggressive)
+    function tryAutoLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            // Silently update current location but don't switch to it automatically
+            currentLocation.lat = position.coords.latitude;
+            currentLocation.lng = position.coords.longitude;
+            console.log('Current location detected:', currentLocation);
+            
+            // Update the current location button to show it's available
+            const currentLocationBtn = document.getElementById('use-current-location');
+            currentLocationBtn.innerHTML = '📍 Use Current Location ✓';
+            currentLocationBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+          },
+          function (error) {
+            console.log('Auto-location failed:', error.message);
+            // Don't show error, just keep default behavior
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 5000,
+            maximumAge: 300000 // 5 minutes
+          }
+        );
+      }
+    }
+
+    // Function to manually request current location
+    function requestCurrentLocation() {
       if (!navigator.geolocation) {
-        console.log("Geolocation is not supported by this browser.");
-        document.getElementById('location-status').textContent = 'Geolocation not supported. Using default location (Kolkata).';
-        loadDefaultPlaces();
+        alert('Geolocation is not supported by this browser.');
         return;
       }
+
+      // Update button to show loading
+      const currentLocationBtn = document.getElementById('use-current-location');
+      const originalText = currentLocationBtn.innerHTML;
+      currentLocationBtn.innerHTML = '⏳ Getting Location...';
+      currentLocationBtn.disabled = true;
 
       // Update status
       document.getElementById('location-status').textContent = 'Getting your current location...';
       
-      // Set timeout for geolocation
-      const timeoutId = setTimeout(() => {
-        console.log('Geolocation timeout - using default location');
-        document.getElementById('location-status').textContent = 'Location timeout. Using default location (Kolkata).';
-        loadDefaultPlaces();
-      }, 10000); // 10 second timeout
-
       navigator.geolocation.getCurrentPosition(
         function (position) {
-          clearTimeout(timeoutId);
           console.log('User location obtained successfully:', position.coords);
           
           // Update current location
           currentLocation.lat = position.coords.latitude;
           currentLocation.lng = position.coords.longitude;
           usingDefaultLocation = false;
-          
-          // Update status
-          document.getElementById('location-status').textContent = 'Found your location! Loading nearby services...';
           
           // Save the updated location
           saveLocationData(currentLocation.lat, currentLocation.lng);
@@ -151,39 +186,115 @@
           // Get the address using Geocoding API
           getAddressFromCoordinates(currentLocation.lat, currentLocation.lng, false);
           
-          // Load places with user's location
-          setTimeout(() => {
+          // Update button states
+          updateLocationButtons();
+          
+          // Reload current category with new location
+          const activeButton = document.querySelector('.button.active-button');
+          if (activeButton) {
+            const category = activeButton.textContent.trim();
+            fetchNearbyPlaces(category, activeButton);
+          } else {
+            // Load default category
             fetchNearbyPlaces('Police Stations', document.querySelector('.button'));
-          }, 1000);
+          }
+          
+          // Reset button
+          currentLocationBtn.innerHTML = '📍 Current Location ✓';
+          currentLocationBtn.disabled = false;
         },
         function (error) {
-          clearTimeout(timeoutId);
           console.log("Geolocation error:", error);
           
-          let errorMessage = 'Unable to get your location. Using default location (Kolkata). ';
+          let errorMessage = 'Unable to get your location. ';
           switch(error.code) {
             case error.PERMISSION_DENIED:
-              errorMessage = 'Location permission denied. Using default location (Kolkata). ';
+              errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
               break;
             case error.POSITION_UNAVAILABLE:
-              errorMessage = 'Location information unavailable. Using default location (Kolkata). ';
+              errorMessage = 'Location information unavailable. Please try again.';
               break;
             case error.TIMEOUT:
-              errorMessage = 'Location request timeout. Using default location (Kolkata). ';
+              errorMessage = 'Location request timeout. Please try again.';
               break;
           }
           
+          alert(errorMessage);
           document.getElementById('location-status').textContent = errorMessage;
-          loadDefaultPlaces();
+          
+          // Reset button
+          currentLocationBtn.innerHTML = originalText;
+          currentLocationBtn.disabled = false;
         },
         {
           enableHighAccuracy: true,
-          timeout: 8000,
-          maximumAge: 60000 // Accept cached location up to 1 minute old
+          timeout: 10000,
+          maximumAge: 60000
         }
       );
     }
 
+    // Function to use default location
+    function useDefaultLocation() {
+      console.log('Switching to default location');
+      
+      usingDefaultLocation = true;
+      
+      // Update the map to center at default location
+      map.setCenter(defaultLocation);
+      map.setZoom(15);
+      
+      // Make sure default marker is visible
+      if (defaultLocationMarker) {
+        defaultLocationMarker.setMap(map);
+      }
+      
+      // Get the address for default location
+      getAddressFromCoordinates(defaultLocation.lat, defaultLocation.lng, true);
+      
+      // Update button states
+      updateLocationButtons();
+      
+      // Reload current category with default location
+      const activeButton = document.querySelector('.button.active-button');
+      if (activeButton) {
+        const category = activeButton.textContent.trim();
+        fetchNearbyPlaces(category, activeButton);
+      } else {
+        // Load default category
+        fetchNearbyPlaces('Police Stations', document.querySelector('.button'));
+      }
+    }
+
+    // Function to update location button states
+    function updateLocationButtons() {
+      const currentLocationBtn = document.getElementById('use-current-location');
+      const defaultLocationBtn = document.getElementById('use-default-location');
+      
+      if (usingDefaultLocation) {
+        // Default location is active
+        defaultLocationBtn.classList.add('active-location');
+        currentLocationBtn.classList.remove('active-location');
+        defaultLocationBtn.innerHTML = '🏠 Default Location ✓';
+        
+        if (currentLocation.lat && currentLocation.lng) {
+          currentLocationBtn.innerHTML = '📍 Use Current Location';
+        } else {
+          currentLocationBtn.innerHTML = '📍 Get Current Location';
+        }
+      } else {
+        // Current location is active
+        currentLocationBtn.classList.add('active-location');
+        defaultLocationBtn.classList.remove('active-location');
+        currentLocationBtn.innerHTML = '📍 Current Location ✓';
+        defaultLocationBtn.innerHTML = '🏠 Use Default Location';
+      }
+    }
+
+    // Remove the automatic location refresh button since we have manual controls now
+    // Comment out or remove the addLocationRefreshButton function call
+
+    // Rest of your existing functions remain the same...
     // Function to load default places
     function loadDefaultPlaces() {
       setTimeout(() => {
