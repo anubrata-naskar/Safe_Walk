@@ -24,9 +24,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
+      - name: Debug - Show files before replacement
+        run: |
+          echo "=== Files containing placeholder ==="
+          grep -r "REPLACE_WITH_YOUR_API_KEY" . || echo "No placeholder found"
+        
       - name: Replace API key in HTML files
         run: |
           find . -name "*.html" -type f -exec sed -i 's/REPLACE_WITH_YOUR_API_KEY/${{ secrets.GOOGLE_MAPS_API_KEY }}/g' {} +
+          
+      - name: Debug - Verify replacement worked
+        run: |
+          echo "=== Checking if replacement worked ==="
+          grep -r "REPLACE_WITH_YOUR_API_KEY" . && echo "ERROR: Placeholder still found!" || echo "SUCCESS: All placeholders replaced"
+          echo "=== Checking for actual API key ==="
+          grep -r "AIza" . && echo "API key found in files" || echo "No API key found"
           
       - name: Setup Pages
         uses: actions/configure-pages@v4
