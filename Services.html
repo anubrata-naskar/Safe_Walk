@@ -56,6 +56,7 @@
     let usingDefaultLocation = true;
     let geocoder;
     let placesService;
+    let userLocationMarker = null;
  
     // Function to initialize the map
     function initMap() {
@@ -80,88 +81,124 @@
         map: map,
         title: "Default Location (Kolkata)",
         icon: {
-          url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+          url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
         }
       });
       
-      // Save default location to localStorage
-      saveLocationData(defaultLocation.lat, defaultLocation.lng);
-      
       // Get the address for default location
-      getAddressFromCoordinates(defaultLocation.lat, defaultLocation.lng);
+      getAddressFromCoordinates(defaultLocation.lat, defaultLocation.lng, true);
       
-      // Load initial places based on default location
+      console.log('Map initialization complete');
+      
+      // Immediately try to get user's location
+      getUserLocation();
+    }
+
+    // Function to get user's current location
+    function getUserLocation() {
+      if (!navigator.geolocation) {
+        console.log("Geolocation is not supported by this browser.");
+        document.getElementById('location-status').textContent = 'Geolocation not supported. Using default location (Kolkata).';
+        loadDefaultPlaces();
+        return;
+      }
+
+      // Update status
+      document.getElementById('location-status').textContent = 'Getting your current location...';
+      
+      // Set timeout for geolocation
+      const timeoutId = setTimeout(() => {
+        console.log('Geolocation timeout - using default location');
+        document.getElementById('location-status').textContent = 'Location timeout. Using default location (Kolkata).';
+        loadDefaultPlaces();
+      }, 10000); // 10 second timeout
+
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          clearTimeout(timeoutId);
+          console.log('User location obtained successfully:', position.coords);
+          
+          // Update current location
+          currentLocation.lat = position.coords.latitude;
+          currentLocation.lng = position.coords.longitude;
+          usingDefaultLocation = false;
+          
+          // Update status
+          document.getElementById('location-status').textContent = 'Found your location! Loading nearby services...';
+          
+          // Save the updated location
+          saveLocationData(currentLocation.lat, currentLocation.lng);
+          
+          // Update the map to center at the user's location
+          map.setCenter(currentLocation);
+          map.setZoom(15);
+          
+          // Remove user location marker if it exists
+          if (userLocationMarker) {
+            userLocationMarker.setMap(null);
+          }
+          
+          // Add a new marker at the current location
+          userLocationMarker = new google.maps.Marker({
+            position: currentLocation,
+            map: map,
+            title: "Your Current Location",
+            icon: {
+              url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+            }
+          });
+          
+          // Get the address using Geocoding API
+          getAddressFromCoordinates(currentLocation.lat, currentLocation.lng, false);
+          
+          // Load places with user's location
+          setTimeout(() => {
+            fetchNearbyPlaces('Police Stations', document.querySelector('.button'));
+          }, 1000);
+        },
+        function (error) {
+          clearTimeout(timeoutId);
+          console.log("Geolocation error:", error);
+          
+          let errorMessage = 'Unable to get your location. Using default location (Kolkata). ';
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location permission denied. Using default location (Kolkata). ';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location information unavailable. Using default location (Kolkata). ';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timeout. Using default location (Kolkata). ';
+              break;
+          }
+          
+          document.getElementById('location-status').textContent = errorMessage;
+          loadDefaultPlaces();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 8000,
+          maximumAge: 60000 // Accept cached location up to 1 minute old
+        }
+      );
+    }
+
+    // Function to load default places
+    function loadDefaultPlaces() {
       setTimeout(() => {
         fetchNearbyPlaces('Police Stations', document.querySelector('.button'));
       }, 1000);
-      
-      // Try to get the user's current location in the background
-      if (navigator.geolocation) {
-        document.getElementById('location-status').textContent = 'Getting your location...';
-        
-        navigator.geolocation.getCurrentPosition(
-          function (position) {
-            console.log('User location obtained successfully');
-            // Success: update the current location
-            currentLocation.lat = position.coords.latitude;
-            currentLocation.lng = position.coords.longitude;
-            usingDefaultLocation = false;
-            
-            // Save the updated location
-            saveLocationData(currentLocation.lat, currentLocation.lng);
-            
-            // Update the map to center at the user's location
-            map.setCenter(currentLocation);
-            
-            // Clear previous default marker and add a new one at the current location
-            defaultMarker.setMap(null);
-            const userMarker = new google.maps.Marker({
-              position: currentLocation,
-              map: map,
-              title: "Your Current Location",
-              icon: {
-                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-              }
-            });
-            
-            // Get the address using Geocoding API
-            getAddressFromCoordinates(currentLocation.lat, currentLocation.lng);
-            
-            // Reload the currently active category with the new location
-            const activeButton = document.querySelector('.button.active-button');
-            if (activeButton) {
-              const category = activeButton.textContent.trim();
-              fetchNearbyPlaces(category, activeButton);
-            } else {
-              fetchNearbyPlaces('Police Stations', document.querySelector('.button'));
-            }
-          },
-          function (error) {
-            console.log("Unable to retrieve your location:", error.message);
-            document.getElementById('location-status').textContent = 'Using default location (Kolkata). ' + currentAddress;
-            // Continue using default location, which is already set up
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 300000
-          }
-        );
-      } else {
-        console.log("Geolocation is not supported by this browser.");
-        document.getElementById('location-status').textContent = 'Geolocation not supported. Using default location.';
-      }
-      
-      console.log('Map initialization complete');
     }
  
-    // Function to save location data to localStorage (no backend needed)
+    // Function to save location data to localStorage
     function saveLocationData(latitude, longitude) {
       try {
         const locationData = {
           latitude: latitude,
           longitude: longitude,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isUserLocation: !usingDefaultLocation
         };
         localStorage.setItem('userLocation', JSON.stringify(locationData));
         console.log('Location saved to localStorage:', locationData);
@@ -171,18 +208,18 @@
     }
  
     // Function to get the address from coordinates using Google Geocoding API
-    function getAddressFromCoordinates(lat, lng) {
+    function getAddressFromCoordinates(lat, lng, isDefault = false) {
       const latlng = { lat: lat, lng: lng };
       
       geocoder.geocode({ location: latlng }, (results, status) => {
         if (status === 'OK' && results[0]) {
           currentAddress = results[0].formatted_address;
           console.log('Address fetched:', currentAddress);
-          displayAddress(currentAddress, usingDefaultLocation);
+          displayAddress(currentAddress, isDefault);
         } else {
           console.error('Geocoding failed:', status);
-          const fallbackAddress = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-          displayAddress(fallbackAddress, usingDefaultLocation);
+          const fallbackAddress = `Coordinates: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+          displayAddress(fallbackAddress, isDefault);
         }
       });
     }
@@ -190,13 +227,22 @@
     // Function to display the address
     function displayAddress(address, isDefault = false) {
       const locationStatus = document.getElementById('location-status');
-      const prefix = isDefault ? 'Default location: ' : 'Your location: ';
-      locationStatus.textContent = prefix + address;
+      if (isDefault) {
+        locationStatus.textContent = 'Default location: ' + address;
+      } else {
+        locationStatus.textContent = 'Your location: ' + address;
+        // Change location status color to indicate it's user's actual location
+        locationStatus.style.background = 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)';
+        locationStatus.style.color = '#155724';
+        locationStatus.style.border = '1px solid rgba(21, 87, 36, 0.2)';
+      }
     }
 
     // Function to fetch nearby places using Google Places API
     function fetchNearbyPlaces(category, buttonElement) {
       console.log('Fetching nearby places for:', category);
+      console.log('Using location:', usingDefaultLocation ? 'Default' : 'User', 
+                  usingDefaultLocation ? defaultLocation : currentLocation);
       
       // Remove active class from all buttons
       document.querySelectorAll('.button').forEach(btn => {
@@ -236,8 +282,9 @@
         type: type
       };
 
-      // Show loading message
-      document.getElementById('results').innerHTML = '<p>Loading nearby ' + category.toLowerCase() + '...</p>';
+      // Show loading message with location info
+      const locationText = usingDefaultLocation ? '(using default location)' : '(using your location)';
+      document.getElementById('results').innerHTML = `<p>Loading nearby ${category.toLowerCase()}... ${locationText}</p>`;
 
       placesService.nearbySearch(request, (results, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK) {
@@ -251,6 +298,31 @@
       });
     }
 
+    // Add a button to manually refresh location
+    function addLocationRefreshButton() {
+      const locationStatus = document.getElementById('location-status');
+      const refreshButton = document.createElement('button');
+      refreshButton.textContent = '🔄 Refresh Location';
+      refreshButton.style.marginLeft = '10px';
+      refreshButton.style.padding = '5px 10px';
+      refreshButton.style.borderRadius = '5px';
+      refreshButton.style.border = 'none';
+      refreshButton.style.background = '#007bff';
+      refreshButton.style.color = 'white';
+      refreshButton.style.cursor = 'pointer';
+      refreshButton.onclick = function() {
+        getUserLocation();
+      };
+      
+      locationStatus.appendChild(refreshButton);
+    }
+
+    // Call this after map initialization
+    setTimeout(() => {
+      addLocationRefreshButton();
+    }, 3000);
+
+    // Rest of your existing functions remain the same...
     // Function to display results
     function displayResults(places, category) {
       const resultsDiv = document.getElementById('results');
@@ -260,7 +332,8 @@
         return;
       }
 
-      let html = `<h3>Nearby ${category} (${places.length} found)</h3>`;
+      const locationText = usingDefaultLocation ? '(from default location)' : '(from your location)';
+      let html = `<h3>Nearby ${category} ${locationText} (${places.length} found)</h3>`;
       
       places.forEach((place, index) => {
         const rating = place.rating ? `⭐ ${place.rating}` : 'No rating';
@@ -269,7 +342,7 @@
           (place.opening_hours.open_now ? '<span class="open">Open now</span>' : '<span class="closed">Closed</span>') : 
           '<span class="unknown">Hours unknown</span>';
         
-        // Calculate distance (approximate)
+        // Calculate distance
         const distance = calculateDistance(
           usingDefaultLocation ? defaultLocation : currentLocation,
           place.geometry.location
